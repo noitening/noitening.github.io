@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nested Markdown Spoiler Document</title>
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --panel: #ffffff;
+      --panel-2: #f1f4f9;
+      --text: #1e2430;
+      --muted: #5b667a;
+      --border: #d6dce8;
+      --accent: #4f46e5;
+      --accent-2: #6366f1;
+      --danger: #801212;
+      --danger-2: #b62525;
+      --shadow: 0 8px 30px rgba(17, 24, 39, 0.08);
+      --code-bg: #eef2f7;
+      --summary-hover: #eef2ff;
+    }
+
+    body.dark {
+      --bg: #0f172a;
+      --panel: #111827;
+      --panel-2: #1f2937;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --border: #374151;
+      --accent: #818cf8;
+      --accent-2: #6366f1;
+      --danger: #aa1d1d;
+      --danger-2: #5a0808;
+      --shadow: 0 10px 35px rgba(0, 0, 0, 0.35);
+      --code-bg: #0b1220;
+      --summary-hover: #1b2540;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+
+    .wrap {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 24px 16px 64px;
+    }
+
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      padding: 12px;
+      margin-bottom: 20px;
+      background: color-mix(in srgb, var(--bg) 88%, transparent);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .toolbar .spacer { flex: 1; }
+
+    button, input[type="search"] {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--panel);
+      color: var(--text);
+      padding: 10px 14px;
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    button:hover { border-color: var(--accent); }
+
+    .danger {
+      background: var(--danger);
+      color: white;
+      border-color: var(--danger);
+    }
+
+    .danger:hover {
+      background: var(--danger-2);
+      border-color: var(--danger-2);
+    }
+
+    .primary {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+
+    .primary:hover {
+      background: var(--accent-2);
+      border-color: var(--accent-2);
+    }
+
+    input[type="search"] {
+      min-width: 240px;
+      flex: 1 1 240px;
+    }
+
+    .title-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
+    }
+
+    .title-card h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      line-height: 1.15;
+    }
+
+    .title-card p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .top-content {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px 20px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+    }
+
+    details {
+      margin: 10px 0 10px 18px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    #output > details { margin-left: 0; }
+
+    summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 14px 16px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      user-select: none;
+      transition: background 0.15s ease;
+    }
+
+    summary:hover { background: var(--summary-hover); }
+    summary::-webkit-details-marker { display: none; }
+
+    .caret {
+      width: 0;
+      height: 0;
+      border-left: 6px solid var(--muted);
+      border-top: 5px solid transparent;
+      border-bottom: 5px solid transparent;
+      transition: transform 0.18s ease;
+      flex: 0 0 auto;
+    }
+
+    details[open] > summary .caret { transform: rotate(90deg); }
+
+    .summary-text {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .anchor-link {
+      opacity: 0;
+      text-decoration: none;
+      color: var(--muted);
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+
+    summary:hover .anchor-link,
+    details:focus-within > summary .anchor-link {
+      opacity: 1;
+    }
+
+    .content {
+      padding: 0 16px 16px;
+    }
+
+    .content p:first-child { margin-top: 0; }
+
+    .content pre {
+      background: var(--code-bg);
+      padding: 14px;
+      border-radius: 14px;
+      overflow-x: auto;
+      border: 1px solid var(--border);
+    }
+
+    .content code {
+      background: var(--code-bg);
+      padding: 0.1em 0.35em;
+      border-radius: 6px;
+    }
+
+    .content pre code {
+      background: transparent;
+      padding: 0;
+    }
+
+    .content blockquote {
+      margin: 1em 0;
+      padding: 0.2em 1em;
+      border-left: 4px solid var(--accent);
+      color: var(--muted);
+      background: color-mix(in srgb, var(--panel-2) 85%, transparent);
+      border-radius: 0 10px 10px 0;
+    }
+
+    .content table {
+      border-collapse: collapse;
+      width: 100%;
+      display: block;
+      overflow-x: auto;
+    }
+
+    .content th, .content td {
+      border: 1px solid var(--border);
+      padding: 8px 10px;
+      text-align: left;
+    }
+
+    .content img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 12px;
+    }
+
+    mark.search-hit {
+      background: #fef08a;
+      color: #111827;
+      padding: 0 2px;
+      border-radius: 4px;
+    }
+
+    .footer-note {
+      margin-top: 24px;
+      color: var(--muted);
+      font-size: 0.95rem;
+      text-align: center;
+    }
+
+    @media (max-width: 700px) {
+      .toolbar { padding: 10px; }
+      button, input[type="search"] { width: 100%; }
+      .toolbar .spacer { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="toolbar">
+      <button class="danger" id="expandAllBtn">Expand all</button>
+      <button id="collapseAllBtn">Collapse all</button>
+      <button id="themeBtn">Toggle dark mode</button>
+      <div class="spacer"></div>
+      <form id="searchForm" style="display:flex; gap:10px; flex:1;">
+        <input
+          type="search"
+          id="searchInput"
+          placeholder="Search (careful of spoilers)"
+        />
+        <button type="submit" class="primary">Search</button>
+      </form>
+    </div>
+
+    <div class="title-card">
+      <h1 id="docTitle">Noita spoiler free spoilers</h1>
+      <!-- <p> -->
+        <!-- Edit the markdown source at the bottom of this file inside the -->
+        <!-- <code>&lt;script id="source" type="text/plain"&gt;</code> block. Use headings -->
+        <!-- (<code>#</code>, <code>##</code>, <code>###</code>, …) to define nested collapsible sections. -->
+      <!-- </p> -->
+    </div>
+
+    <div id="output"></div>
+
+    <!-- <div class="footer-note"> -->
+      <!-- Tip: you can share this as a single <code>.html</code> file, or host it with GitHub Pages / Netlify. -->
+    <!-- </div> -->
+  </div>
+
+  <!--
+    =========================
+    WRITE ONLY MARKDOWN BELOW
+    =========================
+
+    Rules:
+    - # = top-level section
+    - ## = child section
+    - ### = child of child
+    - and so on
+    - Text under a heading becomes that section's body
+    - Text before the first heading becomes intro text above all sections
+  -->
+  <script id="source" type="text/plain">
+# Aloita tästä
+Noitas be noiting
+
+![missing-image](https://i.ytimg.com/vi/xnOq4ykiYKk/hq720.jpg?sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&rs=AOn4CLAK2E7zXGCHfXf_4hGAjuIJ1Ag6Dg)
+
+Play with keyboard and mouse
+
+General instructiones:
+
+- start game
+- play game
+- die
+- start game
+
+## I died
+
+- die more
+- enable replays, remember to take replays of bullshit deaths (you need to press the death recap button fast enough or the replay feature will "overwrite" it)
+
+**Help! I: ...**
+
+### ... am covered in poison / fire / shit
+
+Always keep water in first item slot. Bind Q to the first item slot. Learn to press Q.
+
+### ... wanna switch to X quickly
+
+Keep item X in another inventory slot, and bind R to that inventory slot. Hint: the green tablet thing hurts when thrown :o
+
+### ... wanna move and kick at the same time
+
+Idk why but you can bind middle mouse button or some extra mouse button to kick. Might be useful.
+
+# General Help
+
+Helpful resources.
+
+## Wand and spell guide minimal spoilers
+
+**Wands**
+
+Every wand is different. Wands have properties:
+
+![missing-image](./img/wand.png)
+
+- Shuffle: does it fire spells in random order (no)
+- Spells/Cast: how many spells are fired at once (1)
+- Cast delay: time between spells (0.22 seconds)
+- Rechrg. Time: additionally when every spell (5 spark bolts) is fired once, you need to wait for the wand to recharge (0.38 seconds)
+- Mana max: Some spells cost 300 mana for instance, so they cannot be cast with this wand (250 mana)
+- Mana chg. Spd: How fast does the mana charge back (49 mana per second)
+- Spread: How much does the spells randomly spread from the intended direction of aim (3 degrees)
+
+---
+**Spells**
+
+Every spell is also different! But some spells are similar. Spells also have some properties.
+
+Some noteworthy properties:
+
+- Type: spell type
+- Cast delay: how much *additional* delay is there after this spell
+- Recharge time: how much *additional* recharge time does this spell add to the wand
+- Spread: how much *additional* spread does the spell have from its intended direction
+
+Spells use **mana**, some spells have liminted **uses**, some have effect **radius**, some have extra **crit chance** and most deal **damage**.
+
+Spell types:
+
+![missing-image](./img/s_projectile.png) Red border spell is a projectile spell - it flies and follows some kind of newtonian trajectory (usually)
+
+![missing-image](./img/s_static.png) Orange border spell is a static spell - it stays in place (usually)
+
+![missing-image](./img/s_passive.png) Dark green border spell is a passive spell - it gives the wand a passive effect, like a torch!
+
+![missing-image](./img/s_modifier.png) Dark blue border spell is a modifier - it gives some additional properties to the next spell, like extra speed. If shuffling, modifies a random spell instead.
+
+![missing-image](./img/s_multi.png) Light blue border spell is a multicast spell - it fires next N spells simultaneously, effectively making *1 combined spell*. If shuffling, fires random spells.
+
+![missing-image](./img/s_material.png) Bright green border spell is a material spell - useful for conjuring materials, such as a sea of lava!
+
+![missing-image](./img/s_other.png) Brown border spells are "other" - they come in varying power and usefulness.
+
+**Spells may also have additional effects, such as:**
+
+![missing-image](./img/s_trigger.png) Trigger: when spell hits something, it fires the next spell
+
+![missing-image](./img/s_delay.png) Delay: spell will automatically fire the next spell, after a small delay
+
+---
+**Wand building**
+
+![missing-image](<./img/Screenshot 2026-05-05 223950.png>) This spark bolt with trigger would - on collision - fire a spitter bolt in random direction (because of the heavy spread modifier).
+
+![missing-image](<./img/Screenshot 2026-05-05 224119.png>) Triple spell and three projectiles - fires all the projectiles simulatenously. **Some** properties of the spells are combined, such as spread.
+
+![missing-image](<./img/Screenshot 2026-05-05 224214.png>) Adds freezing modifier to the next spell, which is actually three spells because of the multicast! When you cast multiple spells at the same time (either modifier, or by wand property Spells/cast), the modifier also applies to all of those spells. Very convenient!
+
+![missing-image](<./img/Screenshot 2026-05-05 224310.png>) Interestingly, modifying any one spell of a multicast affects all the spells of multicast, so this is the same as above.
+
+### Ancient noita wisdom: Wrap casting
+
+![missing-image](<./img/Screenshot 2026-05-05 224453.png>)
+
+- First cast of the wand is spitter bolt. Basic! 
+- Second cast is a double cast, which will cast the next two spells. A spark bolt and ... uh? There's no spells left.
+- Well, the double cast NEEDS two spells, so it will *wrap* to the beginning, and take the first available spell, which is spitter bolt! So the two spell casts would look like so:
+
+![missing-image](<./img/Screenshot 2026-05-05 224503.png>)
+
+This is called wrap casting.
+
+### Ancient noita wisdom: Luminous ping pong
+
+![missing-image](./img/image.png)
+
+**Ping-Pong Path** modifier makes projectile fly in a - surpirse surprise - ping-pong path! 
+
+This causes a **very** interesting reaction with the **Luminous Drill** spell!
+
+#### Show me!
+
+![gif](https://noita.wiki.gg/images/Spell_ping_pong_path_with_lumi_drill.gif)
+
+### Ancient noita wisdom: Chainsaw
+
+![missing-image](<./img/Screenshot 2026-05-05 224609.png>)
+- Negative recharge time, no cast delay(?)
+- I wonder what would happen if I were to wrap cast this with some other spell..
+
+#### Show me!
+
+No >:P Just try it out
+
+## Perks
+
+Tinker with wands everywhere!
+
+Also pick healing :D
+
+# I've finally defeated the final boss
+
+![missing-image](./img/victory.png)
+
+GG WP! A well earned victory!
+
+..
+
+Continue?
+
+## Yes
+
+### The salt
+When the boss dies, it drop's the **salt**
+
+In order to win the game, you need to complete the work with the **salt**.
+
+...
+
+*Where else could I put this thing..*
+
+#### Help
+Look to the sky
+
+##### What
+There is something floating above the mountain, directly above the snowy peak
+
+#### I did it!
+**You brought the salt to the sky altar!**
+
+Was the end result quite toxic? 
+
+You don't have enough *knowledge*.
+
+*I think about 5 knowledge should be enough..*
+
+##### Knowledge..
+**Orbs of knowledge!**
+
+Beating **Kolmi** with more than 5 orbs of knowledge and bringing the **salt** to the sky altar gets you in new game + (or NG1 in the lingo)
+
+Try collecting all the different orbs! 
+
+I've heard the knowledge is split into 11 pieces.
+
+*Do note that if you want a new game ++, or NG2, you need MORE knowledge. At least 6 to be precise. Wait is that a pattern...*
+
+###### Holy shit was Kolmi always this strong
+The more orbs you have, the stronger Kolmi becomes. Also each NG level counts as 1 orb.
+
+Watch out!
+
+###### Wait 11 orbs?
+Ah. My bad. I miscounted.
+
+####### Spoiler table for New Game X and specified orb count
+
+![missing-image](https://static.wikia.nocookie.net/noita_gamepedia_en/images/a/aa/Ending_chart_graph.png/revision/latest/scale-to-width-down/1042?cb=20210724215708)
+
+*What happens at 11 orbs..*
+
+***WHAT* happens at 33 orbs !?**
+
+# I like digging
+
+Some materials are harder than others. Extremely dense rock envelopes most of the world. It is not meant to be destroyed, but some very powerful spells can still dig through it.
+
+## Have you ever had infinite digging?
+
+If you've ever dug out far enough to left or right, you've probably found the world border. A material that you simply can't pass through.
+
+### Cursed rock
+
+This marks the final border of the world. It physically prevents you from going further, by leaving behind an invisible curse that deals constant high damage when attempting to traverse it.
+
+Surely this can be considered an achievement in itself!
+
+*what if I ignore the pain...*
+
+#### Is there something behind the cursed rock?
+
+##### Wait there is another world???
+
+###### Welcome to the parallel worlds
+
+Surprise. Noita actually spreads infinitely to every direction. New perks! new monsters! New orbs?
+
+Go wild and explore.
+
+Do note though, taking any portal in a parallel world teleports you to the main world.
+
+####### I am a small noita lost in an infinite world
+
+If you think you've earned it: [Here's a map](https://noitamap.com). It will absolutely spoil the secrets of entire world, though.
+
+
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script>
+    const sourceEl = document.getElementById('source');
+    const outputEl = document.getElementById('output');
+    const searchInput = document.getElementById('searchInput');
+    const searchForm = document.getElementById('searchForm');
+    const themeBtn = document.getElementById('themeBtn');
+    const expandAllBtn = document.getElementById('expandAllBtn');
+    const collapseAllBtn = document.getElementById('collapseAllBtn');
+
+    const markdown = sourceEl.textContent.replace(/^\n+|\n+$/g, '');
+    const lines = markdown.split(/\r?\n/);
+
+    function slugify(text, used) {
+      let slug = text
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .trim()
+        .replace(/\s+/g, '-');
+      if (!slug) slug = 'section';
+      let unique = slug;
+      let i = 2;
+      while (used.has(unique)) {
+        unique = `${slug}-${i++}`;
+      }
+      used.add(unique);
+      return unique;
+    }
+
+    function isHeading(line) {
+      const m = line.match(/^(#{1,10})\s+(.*)$/);
+      if (!m) return null;
+      return { level: m[1].length, title: m[2].trim() };
+    }
+
+    function parseMarkdownTree(mdLines) {
+      const root = { level: 0, children: [], contentLines: [] };
+      const stack = [root];
+      let current = null;
+
+      for (const line of mdLines) {
+        const heading = isHeading(line);
+        if (heading) {
+          const node = {
+            level: heading.level,
+            title: heading.title,
+            contentLines: [],
+            children: [],
+            id: ''
+          };
+
+          while (stack.length && stack[stack.length - 1].level >= node.level) {
+            stack.pop();
+          }
+
+          stack[stack.length - 1].children.push(node);
+          stack.push(node);
+          current = node;
+        } else {
+          (current || root).contentLines.push(line);
+        }
+      }
+      return root;
+    }
+
+    const tree = parseMarkdownTree(lines);
+    const usedIds = new Set();
+
+    function assignIds(node) {
+      for (const child of node.children) {
+        child.id = slugify(child.title, usedIds);
+        assignIds(child);
+      }
+    }
+    assignIds(tree);
+
+    function renderNode(node) {
+      const details = document.createElement('details');
+      details.dataset.sectionId = node.id;
+      details.id = node.id;
+
+      const summary = document.createElement('summary');
+
+      const caret = document.createElement('span');
+      caret.className = 'caret';
+
+      const text = document.createElement('span');
+      text.className = 'summary-text';
+      text.textContent = node.title;
+
+      const anchor = document.createElement('a');
+      anchor.className = 'anchor-link';
+      anchor.href = `#${node.id}`;
+      anchor.textContent = '#';
+      anchor.title = 'Copy / jump to this section';
+      anchor.addEventListener('click', (e) => {
+        e.stopPropagation();
+        navigator.clipboard?.writeText(location.href.split('#')[0] + '#' + node.id).catch(() => {});
+      });
+
+      summary.append(caret, text, anchor);
+      details.appendChild(summary);
+
+      if (node.contentLines.join('').trim()) {
+        const content = document.createElement('div');
+        content.className = 'content';
+        content.innerHTML = marked.parse(node.contentLines.join('\n').trim());
+        details.appendChild(content);
+      }
+
+      for (const child of node.children) {
+        details.appendChild(renderNode(child));
+      }
+
+      return details;
+    }
+
+    if (tree.contentLines.join('').trim()) {
+      const intro = document.createElement('div');
+      intro.className = 'top-content';
+      intro.innerHTML = marked.parse(tree.contentLines.join('\n').trim());
+      outputEl.appendChild(intro);
+    }
+
+    for (const child of tree.children) {
+      outputEl.appendChild(renderNode(child));
+    }
+
+    function allDetails() {
+      return [...document.querySelectorAll('#output details')];
+    }
+
+    function setAll(open) {
+      allDetails().forEach(d => d.open = open);
+    }
+
+    expandAllBtn.addEventListener('click', () => setAll(true));
+    collapseAllBtn.addEventListener('click', () => setAll(false));
+
+    const savedTheme = localStorage.getItem('nestedDocTheme');
+    if (savedTheme === 'dark') document.body.classList.add('dark');
+
+    themeBtn.addEventListener('click', () => {
+      document.body.classList.toggle('dark');
+      localStorage.setItem('nestedDocTheme', document.body.classList.contains('dark') ? 'dark' : 'light');
+    });
+
+    function clearHighlights(root = outputEl) {
+      const marks = root.querySelectorAll('mark.search-hit');
+      for (const mark of marks) {
+        const text = document.createTextNode(mark.textContent);
+        mark.replaceWith(text);
+      }
+      root.normalize();
+    }
+
+    function highlightText(root, query) {
+      if (!query) return false;
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+        acceptNode(node) {
+          if (!node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+          if (node.parentElement && ['SCRIPT', 'STYLE', 'SUMMARY', 'MARK'].includes(node.parentElement.tagName)) {
+            return NodeFilter.FILTER_REJECT;
+          }
+          return NodeFilter.FILTER_ACCEPT;
+        }
+      });
+
+      const regex = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+      let found = false;
+      const nodes = [];
+      while (walker.nextNode()) nodes.push(walker.currentNode);
+
+      for (const node of nodes) {
+        const text = node.nodeValue;
+        if (!regex.test(text)) continue;
+        regex.lastIndex = 0;
+        found = true;
+
+        const frag = document.createDocumentFragment();
+        let lastIndex = 0;
+        let match;
+        while ((match = regex.exec(text)) !== null) {
+          if (match.index > lastIndex) {
+            frag.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+          }
+          const mark = document.createElement('mark');
+          mark.className = 'search-hit';
+          mark.textContent = match[0];
+          frag.appendChild(mark);
+          lastIndex = match.index + match[0].length;
+        }
+        if (lastIndex < text.length) {
+          frag.appendChild(document.createTextNode(text.slice(lastIndex)));
+        }
+        node.parentNode.replaceChild(frag, node);
+      }
+      return found;
+    }
+
+    function applySearch() {
+      const query = searchInput.value.trim();
+      clearHighlights();
+
+      if (!query) return;
+
+      highlightText(outputEl, query);
+
+      allDetails().forEach(d => {
+        const hasMatch = d.querySelector('mark.search-hit');
+        if (hasMatch) {
+          d.open = true;
+          let p = d.parentElement?.closest('details');
+          while (p) {
+            p.open = true;
+            p = p.parentElement?.closest('details');
+          }
+        }
+      });
+    }
+
+    searchForm.addEventListener('submit', (e) => {
+      e.preventDefault(); // prevents page reload
+      applySearch();
+    });
+
+    function openHashTarget() {
+      const hash = decodeURIComponent(location.hash.slice(1));
+      if (!hash) return;
+      const target = document.getElementById(hash);
+      if (!target) return;
+      let p = target;
+      while (p) {
+        if (p.tagName === 'DETAILS') p.open = true;
+        p = p.parentElement?.closest('details');
+      }
+      setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+    }
+
+    window.addEventListener('hashchange', openHashTarget);
+    openHashTarget();
+  </script>
+</body>
+</html>
