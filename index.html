@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Nested Markdown Spoiler Document</title>
+  <title>The noitening</title>
   <style>
     :root {
       --bg: #f6f7fb;
@@ -201,6 +201,15 @@
       opacity: 1;
     }
 
+    .badge {
+      margin-left: 8px;
+      padding: 2px 6px;
+      font-size: 10px;
+      background: var(--accent);
+      color: white;
+      border-radius: 10px;
+    }
+
     .content {
       padding: 0 16px 16px;
     }
@@ -293,34 +302,22 @@
     </div>
 
     <div class="title-card">
-      <h1 id="docTitle">Noita spoiler free spoilers</h1>
-      <!-- <p> -->
-        <!-- Edit the markdown source at the bottom of this file inside the -->
-        <!-- <code>&lt;script id="source" type="text/plain"&gt;</code> block. Use headings -->
-        <!-- (<code>#</code>, <code>##</code>, <code>###</code>, …) to define nested collapsible sections. -->
-      <!-- </p> -->
+      <h1 id="docTitle">The noitening</h1>
+      <p>
+        This document offers some much needed help on your wizarding career, with minimal chance of accidentally spoiling the magic.
+        Spoilers are hidden in nested links, and they are meant to be read (clicked open) as you progress in the game.
+      </p>
+      <p>
+        Some spoilers are titled "Ancient noita wisdom" - they are totally optional, but provide you with
+        great knowledge and power.
+      </p>
+      <p>
+        Last update: 15/05/2026 15:45
+      </p>
     </div>
 
     <div id="output"></div>
-
-    <!-- <div class="footer-note"> -->
-      <!-- Tip: you can share this as a single <code>.html</code> file, or host it with GitHub Pages / Netlify. -->
-    <!-- </div> -->
   </div>
-
-  <!--
-    =========================
-    WRITE ONLY MARKDOWN BELOW
-    =========================
-
-    Rules:
-    - # = top-level section
-    - ## = child section
-    - ### = child of child
-    - and so on
-    - Text under a heading becomes that section's body
-    - Text before the first heading becomes intro text above all sections
-  -->
   <script id="source" type="text/plain">
 # Click me!
 Noitas be noiting
@@ -586,6 +583,7 @@ If you think you've earned it: [Here's a map](https://noitamap.com). It will abs
     const expandAllBtn = document.getElementById('expandAllBtn');
     const collapseAllBtn = document.getElementById('collapseAllBtn');
 
+    const currentSeenState = loadSeenState();
     const markdown = sourceEl.textContent.replace(/^\n+|\n+$/g, '');
     const lines = markdown.split(/\r?\n/);
 
@@ -606,9 +604,9 @@ If you think you've earned it: [Here's a map](https://noitamap.com). It will abs
     }
 
     function isHeading(line) {
-      const m = line.match(/^(#{1,10})\s+(.*)$/);
+      const m = line.match(/^(#{1,10})\s+(.*?)(\s*<!\-\-\s*(.*?)\s*\-\->)?$/);
       if (!m) return null;
-      return { level: m[1].length, title: m[2].trim() };
+      return { level: m[1].length, title: m[2].trim(), version: m[4] ? parseInt(m[4]) : 1};
     }
 
     function parseMarkdownTree(mdLines) {
@@ -622,6 +620,7 @@ If you think you've earned it: [Here's a map](https://noitamap.com). It will abs
           const node = {
             level: heading.level,
             title: heading.title,
+            version: heading.version,
             contentLines: [],
             children: [],
             id: ''
@@ -655,6 +654,7 @@ If you think you've earned it: [Here's a map](https://noitamap.com). It will abs
     function renderNode(node) {
       const details = document.createElement('details');
       details.dataset.sectionId = node.id;
+      details.dataset.version = node.version;
       details.id = node.id;
 
       const summary = document.createElement('summary');
@@ -675,8 +675,16 @@ If you think you've earned it: [Here's a map](https://noitamap.com). It will abs
         e.stopPropagation();
         navigator.clipboard?.writeText(location.href.split('#')[0] + '#' + node.id).catch(() => {});
       });
+      
+      if (Number(node.version) > Number(currentSeenState[node.id] ? currentSeenState[node.id] : 1)) {
+        const badge = document.createElement('span');
+        badge.className = "badge";
+        badge.textContent = "New!";
+        summary.append(caret, badge, text, anchor);
+      } else {
+        summary.append(caret, text, anchor);
+      }
 
-      summary.append(caret, text, anchor);
       details.appendChild(summary);
 
       if (node.contentLines.join('').trim()) {
@@ -689,6 +697,13 @@ If you think you've earned it: [Here's a map](https://noitamap.com). It will abs
       for (const child of node.children) {
         details.appendChild(renderNode(child));
       }
+
+      details.addEventListener('click', (e) => {
+        requestAnimationFrame(() => {
+            saveState();
+            saveSeenState();
+        });
+      });
 
       return details;
     }
@@ -797,6 +812,41 @@ If you think you've earned it: [Here's a map](https://noitamap.com). It will abs
       });
     }
 
+    function loadSeenState() {
+      const state = JSON.parse(localStorage.getItem("seen-state") || "{}");
+      return state;
+    }
+
+    function saveSeenState() {
+      const state = loadSeenState();
+      allDetails().forEach(d => {
+        if (d.open) {
+          state[d.id] = d.dataset.version;
+        }
+      });
+      localStorage.setItem("seen-state", JSON.stringify(state));
+      console.log(state);
+    }
+
+    function loadState() {
+      const saved = JSON.parse(localStorage.getItem("open-state") || "{}");
+      allDetails().forEach(d => {
+        if (saved[d.id] !== undefined) {
+          d.open = saved[d.id];
+        }
+      });
+    }
+
+    function saveState() {
+      const state = {};
+      allDetails().forEach(d => {
+        if (d.open) {
+          state[d.id] = d.open;
+        }
+      });
+      localStorage.setItem("open-state", JSON.stringify(state));
+    }
+
     searchForm.addEventListener('submit', (e) => {
       e.preventDefault(); // prevents page reload
       applySearch();
@@ -817,6 +867,7 @@ If you think you've earned it: [Here's a map](https://noitamap.com). It will abs
 
     window.addEventListener('hashchange', openHashTarget);
     openHashTarget();
+    loadState();
   </script>
 </body>
 </html>
